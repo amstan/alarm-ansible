@@ -4,32 +4,44 @@
     build: '{{playbook_dir}}/build'
     chroot: '{{build}}/chroot'
   hosts: localhost
+  tags: chroot
+
   tasks:
     - name: Download Arch Linux ARM
       ansible.builtin.get_url:
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz'
         checksum: 'md5:http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.md5'
         dest: '{{build}}/{{rootfs}}.tar.gz'
+      tags: aquire
+
     - name: Download Arch Linux ARM signature
       ansible.builtin.get_url:
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.sig'
         dest: '{{build}}/{{rootfs}}.tar.gz.sig'
+      tags: aquire
+
     - name: Check GPG Signature of Arch Linux ARM
       ansible.builtin.shell:
         chdir: '{{build}}'
-        cmd:
-          gpg --keyserver hkps://keyserver.ubuntu.com --recv-key 68B3537F39A313B3E574D06777193F152BDBE6A6;
+        cmd: |
+          gpg --keyserver hkps://keyserver.ubuntu.com --recv-key 68B3537F39A313B3E574D06777193F152BDBE6A6
           gpg --verify '{{rootfs}}.tar.gz.sig' '{{rootfs}}.tar.gz'
+      tags: aquire
+
     - name: Creates Arch Linux ARM directory
       file:
         path: '{{chroot}}'
         state: directory
+      tags: aquire
+
     - name: Extract Arch Linux ARM
       ansible.builtin.unarchive:
         remote_src: yes
         src: '{{build}}/{{rootfs}}.tar.gz'
         dest: '{{chroot}}'
         creates: '{{chroot}}/var/log' # about the last thing from that archive
+      tags: aquire
+
     - name: Bootstrap chroot (install python for ansible)
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}'
@@ -41,6 +53,8 @@
           '
         creates:
           '{{chroot}}/usr/bin/python'
+      tags: aquire
+
     - name: Add chroot host to inventory
       ansible.builtin.add_host:
         groups: archlinuxarm
@@ -49,18 +63,21 @@
         ansible_host: "{{chroot}}"
         ansible_chroot_exe: "{{playbook_dir}}/chroot.sh"
         ansible_python_interpreter: "/usr/bin/python"
+      tags: chroot_inventory
 
-- name: Installation stage 1
-  # to be done on a raw Arch Linux install
-  # chroot or through ssh
+
+- name: Installation of packages and things as root
   hosts: archlinuxarm
   vars:
     ansible_become: yes
+
   tasks:
     - name: Update packages
       community.general.pacman:
         update_cache: yes
         upgrade: yes
+      tags: update
+
     - name: Install more "base" packages
       community.general.pacman:
         package:
@@ -72,6 +89,8 @@
           - networkmanager
           - openssh
         state: present
+      tags: install
+
     - name: Install aux tool packages
       community.general.pacman:
         package:
@@ -79,18 +98,26 @@
           - usbutils # lsusb is here
           - htop
           - wget
+          - man
         state: present
+      tags: install
+
     - name: Make wheel sudoers with NOPASSWD
       ansible.builtin.lineinfile:
           dest: /etc/sudoers
           regexp: '^#.*%wheel.*NOPASSWD.*'
           line: '%wheel ALL=(ALL) NOPASSWD: ALL'
           validate: /usr/sbin/visudo -cf %s
+      tags: provision
+
     - name: Enable and start NetworkManager
       ansible.builtin.systemd:
         name: NetworkManager
         enabled: yes
+      tags: provision
+
     - name: Enable and start sshd
       ansible.builtin.systemd:
         name: sshd
         enabled: yes
+      tags: provision

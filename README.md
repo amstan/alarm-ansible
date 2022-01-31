@@ -17,6 +17,9 @@ The goal here is to have a set of playbooks that generates an SD card that's sup
 
 ## How to run
 
+Define your inventory (at least for the machine settings), see
+inventory_template.yml for more details on how or where to put them.
+
 Optional: Add your own .play.yml files for more custom applications.
 
 ```bash

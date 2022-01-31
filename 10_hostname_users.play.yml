@@ -1,0 +1,35 @@
+- name: Configuration of users and hosts
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+
+  tasks:
+    - name: Set hostname
+      # not ansible.builtin.hostname, since the systemd way will escape the chroot
+      ansible.builtin.lineinfile:
+        path: /etc/hostname
+        regexp: ".*"
+        line: '{{hostname}}'
+      tags: hostname
+
+    - name: Create main user
+      ansible.builtin.user:
+        user: '{{username}}'
+        groups: wheel
+      tags: user
+
+    - name: Install authorized_key from localhost
+      ansible.posix.authorized_key:
+        user: '{{username}}'
+        key: "{{ lookup('file', ssh_key_pub) }}"
+        state: present
+      register: authorized_keys
+      tags: user
+
+    - name: Remove the alarm default user
+      when: authorized_keys['state'] == 'present'
+      ansible.builtin.user:
+        name: alarm
+        state: absent
+        remove: yes
+      tags: user

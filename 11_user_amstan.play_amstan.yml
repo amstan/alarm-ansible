@@ -1,0 +1,31 @@
+- name: Configuration of amstan things (zsh and a bunch of other .files)
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+
+  tasks:
+    - name: Install zsh
+      community.general.pacman:
+        package:
+          - zsh
+        state: present
+      tags: install, user_amstan
+
+    - name: Change user shell to zsh
+      ansible.builtin.user:
+        user: '{{username}}'
+        shell: /bin/zsh
+      tags: user_amstan
+
+    - name: Install .configs
+      vars:
+        ansible_become_user: '{{username}}'
+      ansible.builtin.shell:
+        chdir: '/home/{{username}}'
+        cmd: |
+          git clone https://github.com/amstan/configs.git .configs
+          for i in .{gitconfig,gitignore,pystartup,zshrc}; do
+            ln -s ~/.configs/$i ~/$i
+          done
+        creates: '/home/{{username}}/.zshrc'
+      tags: user_amstan
