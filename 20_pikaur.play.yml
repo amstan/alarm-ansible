@@ -1,0 +1,58 @@
+- name: Pikaur Management
+  hosts: archlinuxarm
+  tags: pikaur
+  vars:
+    ansible_become_user: '{{username}}'
+    build_dir: '/home/{{username}}/.cache/pikaur/build/pikaur' # this can't be /tmp because in a chroot it won't remember between tasks
+
+  tasks:
+    - name: Check for pikaur executable
+      ansible.builtin.stat:
+        path: /usr/bin/pikaur
+      register: pikaur_binary
+      tags: pikaur_bootstrap
+
+    - name: Creates pikaur PKGBUILD directory
+      ansible.builtin.file:
+        path: '{{build_dir}}'
+        state: directory
+      when: not pikaur_binary.stat.exists
+      tags: pikaur_boostrap
+
+    - name: Download pikaur source PKGBUILD
+      ansible.builtin.get_url:
+        url: 'https://aur.archlinux.org/cgit/aur.git/snapshot/pikaur.tar.gz'
+        dest: '{{build_dir}}/pikaur.tar.gz'
+      when: not pikaur_binary.stat.exists
+      tags: pikaur_boostrap
+
+    - name: Extract pikaur PKGBUILD
+      ansible.builtin.unarchive:
+        remote_src: yes
+        src: '{{build_dir}}/pikaur.tar.gz'
+        dest: '{{build_dir}}'
+        creates: '{{build_dir}}/pikaur/PKGBUILD'
+      when: not pikaur_binary.stat.exists
+      tags: pikaur_bootstrap
+
+    - name: Build and install pikaur
+      ansible.builtin.shell:
+        chdir: '{{build_dir}}/pikaur'
+        cmd: makepkg -is --noconfirm
+        creates: /usr/bin/pikaur
+      when: not pikaur_binary.stat.exists
+      tags: pikaur_bootstrap
+
+    - name: Cleanup pikaur PKGBUILD directory
+      file:
+        path: '{{build_dir}}'
+        state: absent
+      tags: pikaur_boostrap
+
+    - name: Update AUR packages with pikaur
+      community.general.pacman:
+        executable: 'pikaur'
+        extra_args: '-a' # AUR packages
+        update_cache: yes
+        upgrade: yes
+      tags: update
