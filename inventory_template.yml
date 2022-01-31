@@ -11,6 +11,10 @@ archlinuxarm: # hosts targeted by alarm-ansible
     ssh_key_pub: '{{ssh_key}}.pub'
     ansible_ssh_private_key_file: '{{ssh_key}}'
 
+    ansible_become: yes # we always need to do this due to the chroot, but for
+                        # user tasks alarm-ansible will just
+                        # ansible_become_user: '{{username}}'
+
   hosts:
     # 'chroot:' host is dynamically added at the end of first playbook
 

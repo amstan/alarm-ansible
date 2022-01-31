@@ -29,7 +29,7 @@
       tags: aquire
 
     - name: Creates Arch Linux ARM directory
-      file:
+      ansible.builtin.file:
         path: '{{chroot}}'
         state: directory
       tags: aquire
@@ -68,8 +68,6 @@
 
 - name: Installation of packages and things as root
   hosts: archlinuxarm
-  vars:
-    ansible_become: yes
 
   tasks:
     - name: Update packages
@@ -88,6 +86,10 @@
           - nano
           - networkmanager
           - openssh
+          - btrfs-progs
+          - arch-install-scripts
+          - python-setuptools
+          - python-pip
         state: present
       tags: install
 
@@ -99,6 +101,8 @@
           - htop
           - wget
           - man
+          - stress
+          - screen
         state: present
       tags: install
 
@@ -120,4 +124,12 @@
       ansible.builtin.systemd:
         name: sshd
         enabled: yes
+      tags: provision
+
+    - name: makepkg config
+      debug: msg="TODO"
+      tags: provision
+
+    - name: pacman config
+      debug: msg="TODO"
       tags: provision

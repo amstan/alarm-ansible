@@ -1,7 +1,6 @@
 - name: Configuration of amstan things (zsh and a bunch of other .files)
   hosts: archlinuxarm
-  vars:
-    ansible_become: yes
+  tags: user_amstan
 
   tasks:
     - name: Install zsh
@@ -9,13 +8,12 @@
         package:
           - zsh
         state: present
-      tags: install, user_amstan
+      tags: install
 
     - name: Change user shell to zsh
       ansible.builtin.user:
         user: '{{username}}'
         shell: /bin/zsh
-      tags: user_amstan
 
     - name: Install .configs
       vars:
@@ -28,4 +26,3 @@
             ln -s ~/.configs/$i ~/$i
           done
         creates: '/home/{{username}}/.zshrc'
-      tags: user_amstan
