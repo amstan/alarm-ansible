@@ -7,10 +7,11 @@ The goal here is to have a set of playbooks that generates an SD card that's sup
 ## Dependencies
 
 * [Ansible](https://docs.ansible.com/ansible/latest/)
-* [qemu-user-static](https://wiki.archlinux.org/title/QEMU#Chrooting_into_arm/arm64_environment_from_x86_64) in order to chroot from x86 into an arm system.
-    * Arch packages:
-        * [binfmt-qemu-static](binfmt-qemu-static)
+* qemu-user-static in order to [chroot from x86 into an arm system](https://wiki.archlinux.org/title/QEMU#Chrooting_into_arm/arm64_environment_from_x86_64)).
+    * Arch aur packages:
         * [qemu-user-static](https://aur.archlinux.org/packages/qemu-user-static/)
+        * [binfmt-qemu-static](https://aur.archlinux.org/packages/binfmt-qemu-static/)
+    * Debian: [qemu-user-static](https://packages.debian.org/sid/qemu-user-static), contains binfmt too
 * [arch-chroot](https://man.archlinux.org/man/arch-chroot.8) in $PATH from arch package [arch-install-scripts](https://archlinux.org/packages/extra/any/arch-install-scripts/).
     * Note for other distros: This is a very self contained file, so feel free to just grab/unpack it from the [arch package file](https://archlinux.org/packages/extra/any/arch-install-scripts/download) with a tar invocation.
 
