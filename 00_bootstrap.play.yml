@@ -1,9 +1,10 @@
 - name: Create Arch Linux ARM rootfs chroot
-  vars:
-    rootfs: 'ArchLinuxARM-aarch64-latest' # variant that alarm calls its tar gz
-    build: '{{playbook_dir}}/build'
-    chroot: '{{build}}/chroot'
   hosts: localhost
+  vars:
+    ansible_become: yes
+    rootfs: 'ArchLinuxARM-armv7-latest' # variant that alarm calls its tar gz
+    build_dir: '{{playbook_dir}}/build'
+    chroot_dir: '{{build_dir}}/chroot'
   tags: chroot
 
   tasks:
@@ -11,56 +12,56 @@
       ansible.builtin.get_url:
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz'
         checksum: 'md5:http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.md5'
-        dest: '{{build}}/{{rootfs}}.tar.gz'
+        dest: '{{build_dir}}/{{rootfs}}.tar.gz'
       tags: aquire
 
     - name: Download Arch Linux ARM signature
       ansible.builtin.get_url:
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.sig'
-        dest: '{{build}}/{{rootfs}}.tar.gz.sig'
+        dest: '{{build_dir}}/{{rootfs}}.tar.gz.sig'
       tags: aquire
 
     - name: Check GPG Signature of Arch Linux ARM
       ansible.builtin.shell:
-        chdir: '{{build}}'
+        chdir: '{{build_dir}}'
         cmd: |
-          gpg --keyserver hkps://keyserver.ubuntu.com --recv-key 68B3537F39A313B3E574D06777193F152BDBE6A6
+          gpg --import '{{playbook_dir}}/archlinuxarm.gpg' &&
           gpg --verify '{{rootfs}}.tar.gz.sig' '{{rootfs}}.tar.gz'
       tags: aquire
 
     - name: Creates Arch Linux ARM directory
       ansible.builtin.file:
-        path: '{{chroot}}'
+        path: '{{chroot_dir}}'
         state: directory
       tags: aquire
 
     - name: Extract Arch Linux ARM
       ansible.builtin.unarchive:
         remote_src: yes
-        src: '{{build}}/{{rootfs}}.tar.gz'
-        dest: '{{chroot}}'
-        creates: '{{chroot}}/var/log' # about the last thing from that archive
+        src: '{{build_dir}}/{{rootfs}}.tar.gz'
+        dest: '{{chroot_dir}}'
+        creates: '{{chroot_dir}}/var/log' # about the last thing from that archive
       tags: aquire
 
     - name: Bootstrap chroot (install python for ansible)
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}'
         cmd: |
-          './chroot.sh' {{chroot}} bash -c '
+          './chroot.sh' {{chroot_dir}} bash -c '
             pacman-key --init;
             pacman-key --populate archlinuxarm;
             pacman -Sy python --noconfirm
           '
         creates:
-          '{{chroot}}/usr/bin/python'
+          '{{chroot_dir}}/usr/bin/python'
       tags: aquire
 
     - name: Add chroot host to inventory
       ansible.builtin.add_host:
         groups: archlinuxarm
-        name: chroot
+        name: archlinuxarm-chroot
         ansible_connection: community.general.chroot
-        ansible_host: "{{chroot}}"
+        ansible_host: "{{chroot_dir}}"
         ansible_chroot_exe: "{{playbook_dir}}/chroot.sh"
         ansible_python_interpreter: "/usr/bin/python"
       tags: chroot_inventory
@@ -68,8 +69,16 @@
 
 - name: Installation of packages and things as root
   hosts: archlinuxarm
+  vars:
+    ansible_become: yes
 
   tasks:
+    - name: Enable pacman.conf ParallelDownloads
+      ansible.builtin.lineinfile:
+          dest: /etc/pacman.conf
+          regexp: '^#ParallelDownloads'
+          line: 'ParallelDownloads = 5'
+
     - name: Update packages
       community.general.pacman:
         update_cache: yes
@@ -126,10 +135,16 @@
         enabled: yes
       tags: provision
 
-    - name: makepkg config
-      debug: msg="TODO"
-      tags: provision
+    - name: Use multiple cores when makepkg
+      # This will help a lot, especially any chroot cross compilation
+      ansible.builtin.lineinfile:
+          dest: /etc/makepkg.conf
+          regexp: '^#MAKEFLAGS'
+          line: 'MAKEFLAGS="-j$(nproc)"'
 
-    - name: pacman config
-      debug: msg="TODO"
-      tags: provision
+    - name: Don't compress when makepkg
+      # This is otherwise slow, unless we really care about size
+      ansible.builtin.lineinfile:
+          dest: /etc/makepkg.conf
+          regexp: "^PKGEXT='.pkg.tar'"
+          line: "PKGEXT='.pkg.tar'"

@@ -1,9 +1,10 @@
 - name: Pikaur Management
   hosts: archlinuxarm
-  tags: pikaur
   vars:
+    ansible_become: yes
     ansible_become_user: '{{username}}'
     build_dir: '/home/{{username}}/.cache/pikaur/build/pikaur' # this can't be /tmp because in a chroot it won't remember between tasks
+  tags: pikaur
 
   tasks:
     - name: Check for pikaur executable
@@ -55,4 +56,3 @@
         extra_args: '-a' # AUR packages
         update_cache: yes
         upgrade: yes
-      tags: update
