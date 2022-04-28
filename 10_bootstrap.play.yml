@@ -13,13 +13,13 @@
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz'
         checksum: 'md5:http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.md5'
         dest: '{{build_dir}}/{{rootfs}}.tar.gz'
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Download Arch Linux ARM signature
       ansible.builtin.get_url:
         url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.sig'
         dest: '{{build_dir}}/{{rootfs}}.tar.gz.sig'
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Check GPG Signature of Arch Linux ARM
       ansible.builtin.shell:
@@ -27,13 +27,13 @@
         cmd: |
           gpg --import '{{playbook_dir}}/archlinuxarm.gpg' &&
           gpg --verify '{{rootfs}}.tar.gz.sig' '{{rootfs}}.tar.gz'
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Creates Arch Linux ARM directory
       ansible.builtin.file:
         path: '{{chroot_dir}}'
         state: directory
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Extract Arch Linux ARM
       ansible.builtin.unarchive:
@@ -41,7 +41,7 @@
         src: '{{build_dir}}/{{rootfs}}.tar.gz'
         dest: '{{chroot_dir}}'
         creates: '{{chroot_dir}}/var/log' # about the last thing from that archive
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Bootstrap chroot (install python for ansible)
       ansible.builtin.shell:
@@ -54,16 +54,16 @@
           '
         creates:
           '{{chroot_dir}}/usr/bin/python'
-      tags: aquire
+      tags: chroot_aquire
 
     - name: Add chroot host to inventory
       ansible.builtin.add_host:
         groups: archlinuxarm
         name: archlinuxarm-chroot
         ansible_connection: community.general.chroot
-        ansible_host: "{{chroot_dir}}"
-        ansible_chroot_exe: "{{playbook_dir}}/chroot.sh"
-        ansible_python_interpreter: "/usr/bin/python"
+        ansible_host: '{{chroot_dir}}'
+        ansible_chroot_exe: '{{playbook_dir}}/chroot.sh'
+        ansible_python_interpreter: '/usr/bin/python'
       tags: chroot_inventory
 
 
@@ -146,5 +146,5 @@
       # This is otherwise slow, unless we really care about size
       ansible.builtin.lineinfile:
           dest: /etc/makepkg.conf
-          regexp: "^PKGEXT='.pkg.tar'"
+          regexp: "^PKGEXT='.pkg.tar"
           line: "PKGEXT='.pkg.tar'"

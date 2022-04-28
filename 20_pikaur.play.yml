@@ -56,3 +56,4 @@
         extra_args: '-a' # AUR packages
         update_cache: yes
         upgrade: yes
+      tags: update
